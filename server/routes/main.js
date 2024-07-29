@@ -1,30 +1,116 @@
 const express = require('express');
 const router = express.Router();
+const Post = require('../models/Post');
 
+/** GET / Home */
 
-//Routes
-//router.get('', (req, res) => {
-//   res.send("Hello World");
-//});
+router.get('', async(req, res) => {
+    try{
+        const locals = {
+            title: "Welcome",
+            description: "WeBlog Creation"
+        }
 
-router.get('', (req, res) => {
-    const locals = {
-        title: "Appropriate Tech Blogs",
-        description: "I commit to post appropriate tech blogs"
+        let perPage = 10;
+        let page = req.query.page || 1;
+
+        const data = await Post.aggregate( [ { $sort: {createdAt: -1} } ] )
+        .skip(perPage * page - perPage)
+        .limit(perPage)
+        .exec();
+
+        //count is deprecated, so there's need to use countDocuments
+
+        const count = await Post.countDocuments({});
+        const nextPage = parseInt(page) + 1;
+        const hasNextPage = nextPage <= Math.ceil(count / perPage);
+
+        res.render('index', {
+            locals,
+            data,
+            current: page,
+            nextPage: hasNextPage ? nextPage : null,
+            currentRoute: '/'
+        });
     }
 
-    res.render('index', { locals });
-})
-
-router.get('', (req, res) => {
-    res.render('index');
+    catch(error){
+        console.log(error);
+    }
 });
+
+
+/** GET / Post :id */
+
+router.get('/post/:id', async(req, res) => {
+
+    try{
+        let slug = req.params.id;
+
+        const data = await Post.findById({_id: slug});
+
+        const locals = {
+            title: data.title,
+            description: "We Blog"
+        }
+
+        res.render('post', {
+            locals,
+            data,
+            currentRoute: `/post/${slug}`
+        });
+    }
+
+    catch(error){
+        console.log(error);
+    }
+
+});
+
+
+/** POST / Post - searchTerm */
+
+router.post('/search', async(req, res) => {
+
+    try {
+        const locals = {
+            title: "Search",
+            description: "WeBlog Creation"
+        }
+
+        let searchTerm = req.body.searchTerm;
+        const searchNoSpecialChar = searchTerm.replace(/[^a-zA-Z0-9]/g, "")
+
+        const data = await Post.find({
+            $or: [
+                { title : { $regex: new RegExp(searchNoSpecialChar, 'i') }},
+                { body: { $regex: new RegExp(searchNoSpecialChar, 'i') }}
+            ]
+        });
+
+        res.render("search", {
+            data,
+            locals,
+            currentRoute: '/'
+        });
+    }
+
+    catch(error){
+        console.log(error);
+    }
+
+});
+
+
+
+/** GET / About */
 
 router.get('/about', (req, res) => {
-    res.render('about');
+    res.render('about', {
+        currentRoute: '/about'
+    });
 });
+
 
 
 module.exports = router;
-
-
