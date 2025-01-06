@@ -162,7 +162,7 @@ router.get('/contact', (req, res) => {
 // }
 
 
-insertPostData();
+// insertPostData();
 
 
 module.exports = router;
